@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Vocab Battle</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #4e73df, #1cc88a);
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+.container {
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 600px;
+    margin: auto;
+}
+input, select, button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 8px;
+    border: none;
+}
+button {
+    background: gold;
+    font-weight: bold;
+    cursor: pointer;
+}
+.player-box {
+    background: rgba(255,255,255,0.2);
+    margin: 10px;
+    padding: 10px;
+    border-radius: 10px;
+}
+.winner {
+    background: green;
+    font-size: 20px;
+    padding: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>⚡ Speed Vocab Battle ⚡</h1>
+
+<div id="setup">
+    <h3>O'yinchilar soni (min 2)</h3>
+    <input type="number" id="playerCount" min="2" value="2">
+
+    <h3>Til tanlang</h3>
+    <select id="language">
+        <option value="english">English</option>
+        <option value="german">German</option>
+    </select>
+
+    <h3>Daraja tanlang</h3>
+    <select id="level">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+    </select>
+
+    <br><br>
+    <button onclick="startGame()">Start Game</button>
+</div>
+
+<div id="game" style="display:none;">
+    <h2 id="currentWord"></h2>
+    <div id="players"></div>
+</div>
+
+<h2 id="winner"></h2>
+
+</div>
+
+<script>
+let wordsDB = {
+    english: {
+        beginner: ["apple","dog","cat","book","house","car","sun","water","tree","phone","pen","table","milk","food","school","friend","family","chair","door","window"],
+        intermediate: ["beautiful","computer","language","science","history","teacher","student","holiday","airport","mountain","weather","picture","important","different","problem","solution","success","future","energy","culture"]
+    },
+    german: {
+        beginner: ["haus","baum","hund","katze","buch","auto","sonne","wasser","milch","schule","freund","familie","tisch","stuhl","fenster","tür","brot","apfel","stadt","land"],
+        intermediate: ["sprache","wissenschaft","geschichte","lehrer","schüler","urlaub","flughafen","wetter","problem","lösung","zukunft","energie","kultur","erfolg","berg","natur","musik","arbeit","reise","zeit"]
+    }
+};
+
+let players = [];
+let currentWord = "";
+let wordList = [];
+
+function startGame() {
+    let count = parseInt(document.getElementById("playerCount").value);
+    if(count < 2){
+        alert("Kamida 2 ta player bo'lishi kerak!");
+        return;
+    }
+
+    let lang = document.getElementById("language").value;
+    let level = document.getElementById("level").value;
+
+    wordList = [...wordsDB[lang][level]].sort(() => 0.5 - Math.random()).slice(0,15);
+
+    players = [];
+    document.getElementById("players").innerHTML = "";
+    document.getElementById("winner").innerHTML = "";
+
+    for(let i=0; i<count; i++){
+        players.push({score:0, time: Date.now(), finished:false});
+
+        document.getElementById("players").innerHTML += `
+        <div class="player-box">
+            <h3>Player ${i+1} | Score: <span id="score${i}">0</span></h3>
+            <input type="text" id="input${i}" onkeyup="checkWord(event, ${i})">
+        </div>`;
+    }
+
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("game").style.display = "block";
+
+    nextWord();
+}
+
+function nextWord(){
+    currentWord = wordList[Math.floor(Math.random()*wordList.length)];
+    document.getElementById("currentWord").innerText = "So'z: " + currentWord;
+}
+
+function checkWord(e, playerIndex){
+    if(e.key === "Enter"){
+        let input = document.getElementById("input"+playerIndex);
+        if(input.value.trim().toLowerCase() === currentWord){
+            players[playerIndex].score++;
+            document.getElementById("score"+playerIndex).innerText = players[playerIndex].score;
+            input.value = "";
+
+            if(players[playerIndex].score >= 15){
+                players[playerIndex].finished = true;
+                let finishTime = (Date.now() - players[playerIndex].time)/1000;
+                document.getElementById("winner").innerHTML = 
+                    `<div class="winner">🏆 Player ${playerIndex+1} g'olib! Vaqti: ${finishTime} sekund</div>`;
+                document.getElementById("game").style.display = "none";
+                return;
+            }
+            nextWord();
+        }
+    }
+}
+</script>
+
+</body>
+</html>
