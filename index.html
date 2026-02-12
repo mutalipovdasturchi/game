@@ -2,155 +2,112 @@
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Speed Vocab Battle</title>
+<title>Web Chess</title>
 <style>
 body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #4e73df, #1cc88a);
-    color: white;
     text-align: center;
-    padding: 20px;
+    font-family: Arial;
 }
-.container {
-    background: rgba(0,0,0,0.3);
-    padding: 20px;
-    border-radius: 15px;
-    max-width: 600px;
-    margin: auto;
+#board {
+    width: 480px;
+    height: 480px;
+    margin: 20px auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    border: 4px solid black;
 }
-input, select, button {
-    padding: 10px;
-    margin: 5px;
-    border-radius: 8px;
-    border: none;
-}
-button {
-    background: gold;
-    font-weight: bold;
+.square {
+    width: 60px;
+    height: 60px;
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
 }
-.player-box {
-    background: rgba(255,255,255,0.2);
-    margin: 10px;
-    padding: 10px;
-    border-radius: 10px;
-}
-.winner {
-    background: green;
-    font-size: 20px;
-    padding: 10px;
-}
+.white { background: #f0d9b5; }
+.black { background: #b58863; }
+.selected { background: yellow !important; }
 </style>
 </head>
 <body>
 
-<div class="container">
-
-<h1>⚡ Speed Vocab Battle ⚡</h1>
-
-<div id="setup">
-    <h3>O'yinchilar soni (min 2)</h3>
-    <input type="number" id="playerCount" min="2" value="2">
-
-    <h3>Til tanlang</h3>
-    <select id="language">
-        <option value="english">English</option>
-        <option value="german">German</option>
-    </select>
-
-    <h3>Daraja tanlang</h3>
-    <select id="level">
-        <option value="beginner">Beginner</option>
-        <option value="intermediate">Intermediate</option>
-    </select>
-
-    <br><br>
-    <button onclick="startGame()">Start Game</button>
-</div>
-
-<div id="game" style="display:none;">
-    <h2 id="currentWord"></h2>
-    <div id="players"></div>
-</div>
-
-<h2 id="winner"></h2>
-
-</div>
+<h1>♟️ Web Chess</h1>
+<h3 id="turn">Navbat: White</h3>
+<div id="board"></div>
 
 <script>
-let wordsDB = {
-    english: {
-        beginner: ["apple","dog","cat","book","house","car","sun","water","tree","phone","pen","table","milk","food","school","friend","family","chair","door","window"],
-        intermediate: ["beautiful","computer","language","science","history","teacher","student","holiday","airport","mountain","weather","picture","important","different","problem","solution","success","future","energy","culture"]
-    },
-    german: {
-        beginner: ["haus","baum","hund","katze","buch","auto","sonne","wasser","milch","schule","freund","familie","tisch","stuhl","fenster","tür","brot","apfel","stadt","land"],
-        intermediate: ["sprache","wissenschaft","geschichte","lehrer","schüler","urlaub","flughafen","wetter","problem","lösung","zukunft","energie","kultur","erfolg","berg","natur","musik","arbeit","reise","zeit"]
-    }
+const boardElement = document.getElementById("board");
+const turnText = document.getElementById("turn");
+
+let selected = null;
+let turn = "white";
+
+const pieces = {
+    r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
+    R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
 };
 
-let players = [];
-let currentWord = "";
-let wordList = [];
+let board = [
+["r","n","b","q","k","b","n","r"],
+["p","p","p","p","p","p","p","p"],
+["","","","","","","",""],
+["","","","","","","",""],
+["","","","","","","",""],
+["","","","","","","",""],
+["P","P","P","P","P","P","P","P"],
+["R","N","B","Q","K","B","N","R"]
+];
 
-function startGame() {
-    let count = parseInt(document.getElementById("playerCount").value);
-    if(count < 2){
-        alert("Kamida 2 ta player bo'lishi kerak!");
-        return;
-    }
-
-    let lang = document.getElementById("language").value;
-    let level = document.getElementById("level").value;
-
-    wordList = [...wordsDB[lang][level]].sort(() => 0.5 - Math.random()).slice(0,15);
-
-    players = [];
-    document.getElementById("players").innerHTML = "";
-    document.getElementById("winner").innerHTML = "";
-
-    for(let i=0; i<count; i++){
-        players.push({score:0, time: Date.now(), finished:false});
-
-        document.getElementById("players").innerHTML += `
-        <div class="player-box">
-            <h3>Player ${i+1} | Score: <span id="score${i}">0</span></h3>
-            <input type="text" id="input${i}" onkeyup="checkWord(event, ${i})">
-        </div>`;
-    }
-
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("game").style.display = "block";
-
-    nextWord();
-}
-
-function nextWord(){
-    currentWord = wordList[Math.floor(Math.random()*wordList.length)];
-    document.getElementById("currentWord").innerText = "So'z: " + currentWord;
-}
-
-function checkWord(e, playerIndex){
-    if(e.key === "Enter"){
-        let input = document.getElementById("input"+playerIndex);
-        if(input.value.trim().toLowerCase() === currentWord){
-            players[playerIndex].score++;
-            document.getElementById("score"+playerIndex).innerText = players[playerIndex].score;
-            input.value = "";
-
-            if(players[playerIndex].score >= 15){
-                players[playerIndex].finished = true;
-                let finishTime = (Date.now() - players[playerIndex].time)/1000;
-                document.getElementById("winner").innerHTML = 
-                    `<div class="winner">🏆 Player ${playerIndex+1} g'olib! Vaqti: ${finishTime} sekund</div>`;
-                document.getElementById("game").style.display = "none";
-                return;
-            }
-            nextWord();
+function drawBoard() {
+    boardElement.innerHTML = "";
+    for(let row=0; row<8; row++){
+        for(let col=0; col<8; col++){
+            const square = document.createElement("div");
+            square.classList.add("square");
+            square.classList.add((row+col)%2==0 ? "white":"black");
+            square.dataset.row = row;
+            square.dataset.col = col;
+            square.innerHTML = pieces[board[row][col]] || "";
+            square.onclick = () => selectSquare(row,col);
+            boardElement.appendChild(square);
         }
     }
 }
+
+function selectSquare(row,col){
+    const piece = board[row][col];
+
+    if(selected){
+        movePiece(selected.row, selected.col, row, col);
+        selected = null;
+        drawBoard();
+        return;
+    }
+
+    if(piece !== ""){
+        if(turn === "white" && piece === piece.toUpperCase()){
+            selected = {row,col};
+        }
+        if(turn === "black" && piece === piece.toLowerCase()){
+            selected = {row,col};
+        }
+    }
+}
+
+function movePiece(r1,c1,r2,c2){
+    const piece = board[r1][c1];
+    if(piece === "") return;
+
+    // oddiy yurish (validatsiyasiz)
+    board[r2][c2] = piece;
+    board[r1][c1] = "";
+
+    turn = turn === "white" ? "black" : "white";
+    turnText.innerText = "Navbat: " + (turn === "white" ? "White":"Black");
+}
+
+drawBoard();
 </script>
 
 </body>
