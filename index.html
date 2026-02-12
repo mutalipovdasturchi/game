@@ -2,37 +2,31 @@
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<title>Web Chess</title>
+<title>Real Chess</title>
 <style>
-body {
-    text-align: center;
-    font-family: Arial;
-}
+body { text-align:center; font-family:Arial; }
 #board {
-    width: 480px;
-    height: 480px;
-    margin: 20px auto;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    border: 4px solid black;
+    width:480px;height:480px;margin:20px auto;
+    display:grid;grid-template-columns:repeat(8,1fr);
+    border:4px solid black;
 }
 .square {
-    width: 60px;
-    height: 60px;
-    font-size: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    width:60px;height:60px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;cursor:pointer;position:relative;
 }
-.white { background: #f0d9b5; }
-.black { background: #b58863; }
-.selected { background: yellow !important; }
+.white { background:#f0d9b5; }
+.black { background:#b58863; }
+.selected { background:yellow !important; }
+.dot {
+    width:15px;height:15px;background:black;
+    border-radius:50%;position:absolute;
+}
 </style>
 </head>
 <body>
 
-<h1>♟️ Web Chess</h1>
+<h1>♟️ Real Chess</h1>
 <h3 id="turn">Navbat: White</h3>
 <div id="board"></div>
 
@@ -40,15 +34,16 @@ body {
 const boardElement = document.getElementById("board");
 const turnText = document.getElementById("turn");
 
-let selected = null;
-let turn = "white";
+let turn="white";
+let selected=null;
+let possibleMoves=[];
 
-const pieces = {
-    r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
-    R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
+const pieces={
+r:"♜",n:"♞",b:"♝",q:"♛",k:"♚",p:"♟",
+R:"♖",N:"♘",B:"♗",Q:"♕",K:"♔",P:"♙"
 };
 
-let board = [
+let board=[
 ["r","n","b","q","k","b","n","r"],
 ["p","p","p","p","p","p","p","p"],
 ["","","","","","","",""],
@@ -59,56 +54,132 @@ let board = [
 ["R","N","B","Q","K","B","N","R"]
 ];
 
-function drawBoard() {
-    boardElement.innerHTML = "";
-    for(let row=0; row<8; row++){
-        for(let col=0; col<8; col++){
-            const square = document.createElement("div");
-            square.classList.add("square");
-            square.classList.add((row+col)%2==0 ? "white":"black");
-            square.dataset.row = row;
-            square.dataset.col = col;
-            square.innerHTML = pieces[board[row][col]] || "";
-            square.onclick = () => selectSquare(row,col);
-            boardElement.appendChild(square);
+function drawBoard(){
+    boardElement.innerHTML="";
+    for(let r=0;r<8;r++){
+        for(let c=0;c<8;c++){
+            let sq=document.createElement("div");
+            sq.className="square "+((r+c)%2==0?"white":"black");
+            sq.innerHTML=pieces[board[r][c]]||"";
+            if(selected && selected.r===r && selected.c===c)
+                sq.classList.add("selected");
+
+            if(possibleMoves.some(m=>m.r===r && m.c===c)){
+                let dot=document.createElement("div");
+                dot.className="dot";
+                sq.appendChild(dot);
+            }
+
+            sq.onclick=()=>handleClick(r,c);
+            boardElement.appendChild(sq);
         }
     }
 }
 
-function selectSquare(row,col){
-    const piece = board[row][col];
-
+function handleClick(r,c){
     if(selected){
-        movePiece(selected.row, selected.col, row, col);
-        selected = null;
+        if(possibleMoves.some(m=>m.r===r && m.c===c)){
+            board[r][c]=board[selected.r][selected.c];
+            board[selected.r][selected.c]="";
+            turn=turn==="white"?"black":"white";
+            turnText.innerText="Navbat: "+(turn==="white"?"White":"Black");
+        }
+        selected=null;
+        possibleMoves=[];
         drawBoard();
         return;
     }
 
-    if(piece !== ""){
-        if(turn === "white" && piece === piece.toUpperCase()){
-            selected = {row,col};
-        }
-        if(turn === "black" && piece === piece.toLowerCase()){
-            selected = {row,col};
-        }
-    }
+    let piece=board[r][c];
+    if(piece==="") return;
+
+    if(turn==="white" && piece!==piece.toUpperCase()) return;
+    if(turn==="black" && piece!==piece.toLowerCase()) return;
+
+    selected={r,c};
+    possibleMoves=getMoves(r,c);
+    drawBoard();
 }
 
-function movePiece(r1,c1,r2,c2){
-    const piece = board[r1][c1];
-    if(piece === "") return;
+function inBoard(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
 
-    // oddiy yurish (validatsiyasiz)
-    board[r2][c2] = piece;
-    board[r1][c1] = "";
+function isEnemy(r,c,isWhite){
+    if(board[r][c]==="") return false;
+    return isWhite
+        ? board[r][c]===board[r][c].toLowerCase()
+        : board[r][c]===board[r][c].toUpperCase();
+}
 
-    turn = turn === "white" ? "black" : "white";
-    turnText.innerText = "Navbat: " + (turn === "white" ? "White":"Black");
+function isEmpty(r,c){ return board[r][c]===""; }
+
+function getMoves(r,c){
+    let moves=[];
+    let piece=board[r][c];
+    let isWhite=piece===piece.toUpperCase();
+    let type=piece.toLowerCase();
+
+    function slide(directions){
+        directions.forEach(d=>{
+            let nr=r+d[0], nc=c+d[1];
+            while(inBoard(nr,nc)){
+                if(isEmpty(nr,nc)){
+                    moves.push({r:nr,c:nc});
+                }else{
+                    if(isEnemy(nr,nc,isWhite))
+                        moves.push({r:nr,c:nc});
+                    break;
+                }
+                nr+=d[0]; nc+=d[1];
+            }
+        });
+    }
+
+    if(type==="p"){
+        let dir=isWhite?-1:1;
+        if(inBoard(r+dir,c) && isEmpty(r+dir,c))
+            moves.push({r:r+dir,c:c});
+
+        if((isWhite && r===6)||(!isWhite && r===1)){
+            if(isEmpty(r+dir,c)&&isEmpty(r+2*dir,c))
+                moves.push({r:r+2*dir,c:c});
+        }
+
+        [[dir,-1],[dir,1]].forEach(d=>{
+            let nr=r+d[0], nc=c+d[1];
+            if(inBoard(nr,nc)&&isEnemy(nr,nc,isWhite))
+                moves.push({r:nr,c:nc});
+        });
+    }
+
+    if(type==="r") slide([[1,0],[-1,0],[0,1],[0,-1]]);
+    if(type==="b") slide([[1,1],[1,-1],[-1,1],[-1,-1]]);
+    if(type==="q") slide([[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]);
+
+    if(type==="n"){
+        [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]
+        .forEach(d=>{
+            let nr=r+d[0], nc=c+d[1];
+            if(inBoard(nr,nc) && (isEmpty(nr,nc)||isEnemy(nr,nc,isWhite)))
+                moves.push({r:nr,c:nc});
+        });
+    }
+
+    if(type==="k"){
+        for(let dr=-1;dr<=1;dr++){
+            for(let dc=-1;dc<=1;dc++){
+                if(dr||dc){
+                    let nr=r+dr,nc=c+dc;
+                    if(inBoard(nr,nc)&&(isEmpty(nr,nc)||isEnemy(nr,nc,isWhite)))
+                        moves.push({r:nr,c:nc});
+                }
+            }
+        }
+    }
+
+    return moves;
 }
 
 drawBoard();
 </script>
-
 </body>
 </html>
